@@ -5,12 +5,12 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Change this line - use '/' for Vercel deployments
+  base: '/',
   server: {
     host: "::",
     port: 8080,
   },
-  // Add base path for deployment
-  base: mode === 'production' ? '/expense-tracker/' : '/',
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
