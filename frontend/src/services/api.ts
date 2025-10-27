@@ -49,33 +49,64 @@ export const healthCheck = (): Promise<{ status: string; timestamp: string }> =>
 export const expenseApi = {
   // Get all expenses
   getAll: (): Promise<Expense[]> => {
-    return apiRequest('/api/expenses');
+    return apiRequest<Expense[]>('/api/expenses').then(expenses => 
+      expenses.map(expense => {
+        // Ensure id field exists and is valid
+        const id = expense.id || (expense as any)._id?.toString() || '';
+        return {
+          ...expense,
+          id: id
+        };
+      }).filter(expense => expense.id && expense.id !== 'undefined')
+    );
   },
 
   // Get expense by ID
   getById: (id: string): Promise<Expense> => {
-    return apiRequest(`/api/expenses/${id}`);
+    return apiRequest<Expense>(`/api/expenses/${id}`).then(expense => {
+      const expenseId = expense.id || (expense as any)._id?.toString() || id;
+      return {
+        ...expense,
+        id: expenseId
+      };
+    });
   },
 
   // Create new expense
-  create: (expense: Omit<Expense, 'id'>): Promise<Expense> => {
-    return apiRequest('/api/expenses', {
+  create: (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>): Promise<Expense> => {
+    return apiRequest<Expense>('/api/expenses', {
       method: 'POST',
       body: JSON.stringify(expense),
+    }).then(response => {
+      const id = response.id || (response as any)._id?.toString() || '';
+      return {
+        ...response,
+        id: id
+      };
     });
   },
 
   // Update expense
-  update: (id: string, expense: Partial<Expense>): Promise<Expense> => {
-    return apiRequest(`/api/expenses/${id}`, {
+  update: (id: string, expense: Partial<Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Expense> => {
+    return apiRequest<Expense>(`/api/expenses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(expense),
+    }).then(response => {
+      const responseId = response.id || (response as any)._id?.toString() || id;
+      return {
+        ...response,
+        id: responseId
+      };
     });
   },
 
   // Delete expense
   delete: (id: string): Promise<void> => {
-    return apiRequest(`/api/expenses/${id}`, {
+    // Validate ID before making request
+    if (!id || id === 'undefined') {
+      return Promise.reject(new Error('Invalid expense ID'));
+    }
+    return apiRequest<void>(`/api/expenses/${id}`, {
       method: 'DELETE',
     });
   },

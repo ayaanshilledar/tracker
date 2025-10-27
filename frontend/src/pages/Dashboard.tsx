@@ -36,7 +36,9 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const data = await expenseApi.getAll();
-      setExpenses(data);
+      // Ensure all expenses have valid IDs
+      const validExpenses = data.filter(expense => expense.id && expense.id !== 'undefined');
+      setExpenses(validExpenses);
     } catch (error) {
       toast.error('Failed to load expenses');
       console.error('Error loading expenses:', error);
@@ -48,12 +50,15 @@ const Dashboard = () => {
   const addExpense = async (expense: ExpenseFormData) => {
     if (!user) return;
     try {
-      const newExpense = await expenseApi.create({
-        ...expense,
-        userId: user.id,
-      });
-      setExpenses(prev => [newExpense, ...prev]);
-      toast.success('Expense added successfully');
+      const newExpense = await expenseApi.create(expense);
+      // Ensure the new expense has a valid ID
+      if (newExpense.id && newExpense.id !== 'undefined') {
+        setExpenses(prev => [newExpense, ...prev]);
+        toast.success('Expense added successfully');
+      } else {
+        toast.error('Failed to add expense: Invalid ID');
+        console.error('New expense has invalid ID:', newExpense);
+      }
       setIsFormOpen(false);
     } catch (error) {
       toast.error('Failed to add expense');
@@ -62,12 +67,24 @@ const Dashboard = () => {
   };
 
   const updateExpense = async (id: string, updates: ExpenseFormData) => {
+    // Validate ID
+    if (!id || id === 'undefined') {
+      toast.error('Invalid expense ID');
+      return;
+    }
+    
     try {
       const updatedExpense = await expenseApi.update(id, updates);
-      setExpenses(prev => prev.map(exp => exp.id === id ? updatedExpense : exp));
-      toast.success('Expense updated successfully');
-      setEditingExpense(null);
-      setIsFormOpen(false);
+      // Ensure the updated expense has a valid ID
+      if (updatedExpense.id && updatedExpense.id !== 'undefined') {
+        setExpenses(prev => prev.map(exp => exp.id === id ? updatedExpense : exp));
+        toast.success('Expense updated successfully');
+        setEditingExpense(null);
+        setIsFormOpen(false);
+      } else {
+        toast.error('Failed to update expense: Invalid ID');
+        console.error('Updated expense has invalid ID:', updatedExpense);
+      }
     } catch (error) {
       toast.error('Failed to update expense');
       console.error('Error updating expense:', error);
@@ -75,6 +92,12 @@ const Dashboard = () => {
   };
 
   const deleteExpense = async (id: string) => {
+    // Validate ID
+    if (!id || id === 'undefined') {
+      toast.error('Invalid expense ID');
+      return;
+    }
+    
     try {
       await expenseApi.delete(id);
       setExpenses(prev => prev.filter(exp => exp.id !== id));

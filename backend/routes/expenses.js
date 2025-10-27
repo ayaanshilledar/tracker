@@ -12,6 +12,22 @@ function validateExpensePayload({ title, amount, category, date }) {
   return errors;
 }
 
+// Helper to format expense object for response
+function formatExpense(expense) {
+  if (!expense) return null;
+  
+  // Convert Mongoose document to plain object and ensure id field
+  const expenseObj = expense.toObject ? expense.toObject() : expense;
+  
+  // Map _id to id if needed
+  if (expenseObj._id && !expenseObj.id) {
+    expenseObj.id = expenseObj._id.toString();
+    delete expenseObj._id;
+  }
+  
+  return expenseObj;
+}
+
 // POST /api/expenses - create new expense
 router.post('/', async (req, res, next) => {
   try {
@@ -23,7 +39,7 @@ router.post('/', async (req, res, next) => {
 
     const expense = new Expense({ title: title.trim(), amount: Number(amount), category: category.trim(), date: new Date(date) });
     const created = await expense.save();
-    return res.status(201).json(created);
+    return res.status(201).json(formatExpense(created));
   } catch (err) {
     next(err);
   }
@@ -33,7 +49,7 @@ router.post('/', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const expenses = await Expense.find().sort({ date: -1 });
-    res.json(expenses);
+    res.json(expenses.map(formatExpense));
   } catch (err) {
     next(err);
   }
@@ -44,7 +60,7 @@ router.get('/:id', async (req, res, next) => {
   try {
     const expense = await Expense.findById(req.params.id);
     if (!expense) return res.status(404).json({ message: 'Expense not found' });
-    res.json(expense);
+    res.json(formatExpense(expense));
   } catch (err) {
     next(err);
   }
@@ -78,7 +94,7 @@ router.put('/:id', async (req, res, next) => {
     expense.date = new Date(updateFields.date ?? expense.date);
 
     const saved = await expense.save();
-    res.json(saved);
+    res.json(formatExpense(saved));
   } catch (err) {
     next(err);
   }
